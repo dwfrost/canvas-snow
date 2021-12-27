@@ -10,6 +10,7 @@ class Snow {
      * @param {Number} options.scale 雪花图片缩放倍数
      * @param {Number} options.speed 雪花图片飘落速度
      * @param {Number} options.opacity 雪花图片透明度
+     * @param {Boolean} options.autoplay 自动播放
      */
     constructor(options) {
         this.options = options || {}
@@ -18,6 +19,8 @@ class Snow {
         this.ctx = this.canvas.getContext('2d')
         this.count = 0
         this.snowItems = []
+        this.timer = null
+        this.img = null
 
         let style = this.canvas.style
         // style.position = 'fixed'
@@ -25,25 +28,34 @@ class Snow {
         // style.left = '0'
         style.width = this.options.width || '100%'
         style.height = this.options.height || '100%'
+        style.pointerEvents = 'none'
         // style.zIndex = '999999'
-        // style.pointerEvents = 'none'
 
         window.addEventListener('load', this.onLoad.bind(this))
         window.addEventListener('resize', this.resize.bind(this))
+        document.body.appendChild(this.canvas)
     }
 
-    onLoad(callback) {
-        // callback && callback()
+    onLoad() {
         this.resize()
-        this.init(this.update.bind(this))
-        document.body.appendChild(this.canvas)
-        // this.start()
+        this.options.autoplay && this.start()
     }
 
-    start() {
-        this.resize()
-        this.init(this.update.bind(this))
-        document.body.appendChild(this.canvas)
+    async start() {
+        await this.loadSnowImg()
+        this.update()
+    }
+    stop() {
+        cancelAnimationFrame(this.timer)
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+        this.snowItems = []
+    }
+
+    pause() {
+        cancelAnimationFrame(this.timer)
+    }
+    continue() {
+        this.update()
     }
 
     resize() {
@@ -59,38 +71,43 @@ class Snow {
         this.ctx.fillStyle = '#FFF'
     }
 
-    init(callback) {
+    // 加载雪花图片
+    loadSnowImg() {
         this.snowItems = new Array(this.count)
 
         let img = new Image()
-        this.__img = img
         img.src = this.options.snowImg || 'https://cdn.jsdelivr.net/gh/dwfrost/images@master/20211227/snow.229eudr2rxts.webp'
-        img.onload = () => {
-            for (let i = 0; i < this.count; i++) {
-                this.snowItems[i] = new SnowItem({ ...this.options, canvasWidth: this.canvas.width, canvasHeight: this.canvas.height })
+        this.img = img
+
+        return new Promise(resove => {
+            img.onload = () => {
+                for (let i = 0; i < this.count; i++) {
+                    this.snowItems[i] = new SnowItem({ ...this.options, canvasWidth: this.canvas.width, canvasHeight: this.canvas.height })
+                }
+                resove()
             }
-            callback(img)
-        }
+        })
     }
 
-    update(img) {
-        window.requestAnimationFrame(() => {
-            this.update(img)
+    update() {
+        this.timer = window.requestAnimationFrame(() => {
+            this.update()
         })
 
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+        const img = this.img
 
         for (let i = 0; i < this.count; i++) {
-            const snowflake = this.snowItems[i]
-            snowflake.y += snowflake.vy
-            snowflake.x += snowflake.vx
+            const snowItem = this.snowItems[i]
+            snowItem.y += snowItem.vy
+            snowItem.x += snowItem.vx
 
-            if (snowflake.y > this.canvas.height || snowflake.x > this.canvas.width || snowflake.x < 0) {
+            if (snowItem.y > this.canvas.height || snowItem.x > this.canvas.width || snowItem.x < 0) {
                 this.snowItems[i] = new SnowItem({ ...this.options, canvasWidth: this.canvas.width, canvasHeight: this.canvas.height })
-            } else if (snowflake.y > 0) {
-                this.ctx.globalAlpha = snowflake.opacity
+            } else if (snowItem.y > 0) {
+                this.ctx.globalAlpha = snowItem.opacity
                 this.ctx.beginPath()
-                this.ctx.drawImage(img, snowflake.x, snowflake.y, img.width * snowflake.scale, img.height * snowflake.scale)
+                this.ctx.drawImage(img, snowItem.x, snowItem.y, img.width * snowItem.scale, img.height * snowItem.scale)
                 this.ctx.closePath()
                 this.ctx.fill()
             }
@@ -105,26 +122,8 @@ class SnowItem {
         this.x = randomize(options.canvasWidth)
         this.y = randomize(options.canvasHeight * -1)
         this.scale = options.scale
-        // this.scale = 0.2
         this.opacity = options.opacity || 0.3 + randomize(0.7) // 透明度
         this.vy = 1 * options.speed + randomize(3) // y轴速度
         this.vx = 0.5 * options.speed - randomize() // x轴速度
     }
 }
-
-const snow = new Snow({
-    // width: '200',
-    // height: '200',
-    scale: 0.2,
-    speed: 1,
-    opacity: 1,
-    snowImg: 'https://cdn.jsdelivr.net/gh/dwfrost/images@master/20211227/snow.229eudr2rxts.webp'
-})
-// snow.onReady(() => {
-//     snow.start()
-// })
-
-// export default Snow
-// module.exports = {
-//     Snow
-// }

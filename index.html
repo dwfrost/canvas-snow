@@ -2,7 +2,8 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <title>Snowflake Demo</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <title>Snow Demo</title>
         <style>
             html,
             body {
@@ -12,9 +13,120 @@
                 width: 100%;
                 height: 100%;
             }
+
+            .content {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 100%;
+                text-align: center;
+            }
+            .item {
+                margin: 10px auto;
+            }
+            [v-cloak] {
+                display: none;
+            }
         </style>
     </head>
-    <body></body>
 
+    <body>
+        <div id="app">
+            <div class="content">
+                <div class="item">
+                    <button v-cloak @click="switchPlay">{{playText}}</button>
+                    <button v-cloak @click="reset">{{status==='notStart'?'开始下雪':'重新下雪'}}</button>
+                    <button :disabled="status==='notStart'" v-cloak @click="stop">停止下雪</button>
+                </div>
+                <div class="item">
+                    <div class="range">
+                        <span>大小</span>
+                        <input type="range" id="1" min="1" max="100" v-model="scale100" />
+                        {{scale}}
+                    </div>
+                    <div class="range">
+                        <span>速度</span>
+                        <input type="range" id="1" min="1" max="500" v-model="speed100" />
+                        {{speed}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
     <script src="./snowflake.js"></script>
+    <script>
+        const snow = new Snow({
+            // width: '200',
+            // height: '200',
+            scale: 0.2,
+            speed: 1,
+            // opacity: 1,
+            autoplay: true,
+            snowImg: 'https://cdn.jsdelivr.net/gh/dwfrost/images@master/20211227/snow.229eudr2rxts.webp'
+        })
+        var app = new Vue({
+            el: '#app',
+            data: {
+                status: 'isPlaying', // notStart isPlaying isPaused isOver
+                scale100: 20,
+                speed100: 10
+            },
+            computed: {
+                playText() {
+                    const map = {
+                        notStart: '开始下雪',
+                        isPaused: '继续下雪',
+                        isPlaying: '暂停下雪'
+                    }
+                    return map[this.status]
+                },
+                scale() {
+                    const scale = (this.scale100 / 100).toFixed(1)
+                    return scale > 0 ? scale : 0.1
+                },
+                speed() {
+                    const speed = (this.speed100 / 100).toFixed(1)
+                    return speed > 0 ? speed : 0.1
+                }
+            },
+            watch: {
+                speed(val) {
+                    snow.options.speed = val
+                },
+                scale(val) {
+                    snow.options.scale = val
+                }
+            },
+            methods: {
+                switchPlay() {
+                    if (this.status === 'notStart') {
+                        snow.start()
+                        this.status = 'isPlaying'
+                    } else if (this.status === 'isPlaying') {
+                        snow.pause()
+                        this.status = 'isPaused'
+                    } else if (this.status === 'isPaused') {
+                        snow.continue()
+                        this.status = 'isPlaying'
+                    }
+                },
+                reset() {
+                    this.stop()
+
+                    snow.start()
+                    this.status = 'isPlaying'
+                },
+                stop() {
+                    snow.stop()
+                    this.status = 'notStart'
+                },
+
+                onScaleChange(value) {
+                    console.log(value)
+                }
+            }
+        })
+    </script>
 </html>
